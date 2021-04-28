@@ -1,24 +1,28 @@
+import json
+import random
+import time
+import logging
+
 import requests
 from bs4 import BeautifulSoup
-from retry import retry
 
-import json
-from json import JSONDecodeError
-import logging
-import random
+from userAgents import scrape_userAgents
+from middleware import NoProductException, handle_errors
+from logger import logger
 
+logger = logger
+
+AGENTS = scrape_userAgents()
 
 NAVER = "https://search.shopping.naver.com/search/all"
 
-headers = {
-    "referer": "https://shopping.naver.com/",
-    "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.128 Safari/537.36"
-}
 
-logging.basicConfig()
-
-
-def extract_product_list(query, p):
+def extract_catalog_links(query, p):
+    # 키워드 입력 받아 가격 비교 링크 모음 뽑기
+    headers = {
+        "referer": "https://shopping.naver.com/",
+        "user-agent": random.choice(AGENTS)
+    }
     payload = {
         "frm": "NVSHMDL",
         "origQuery": query,
@@ -30,37 +34,76 @@ def extract_product_list(query, p):
         "timestamp": "",
         "viewType": "list"
     }
-    r = requests.get(NAVER, params=payload, headers=headers)
-    if r.status_code == 200:
+    try:
+        r = requests.get(NAVER, params=payload,
+                         headers=headers)
         soup = BeautifulSoup(r.text, 'html.parser')
-        # rel_links = [a['href'] for a in soup.find_all(
-        #     "a", {"class": "basicList_compare__3AjuT"})]
         data = soup.find('script', {'id': '__NEXT_DATA__'}).string
         rel_links = [item['item']['crUrl'] for item in json.loads(
             data)['props']['pageProps']['initialState']['products']['list']]
         return rel_links
+    except:
+        print('skipping')
 
 
-@retry(JSONDecodeError, delay=random.uniform(0, 5), jitter=1)
-def search_catalog(r, catalog):
-    res = requests.get(catalog, headers={
+def search_catalog(response):
+    # 가격 비교 경쟁사 뽑기
+    catalog = response.url.split("?")[0]+"/malls?pr=PC"
+    headers = {
         'authority': 'search.shopping.naver.com',
-        'referer': r.url,
+        'referer': response.url,
         'urlprefix': '/api',
-        'user-agent': headers['user-agent']
-    }).json()['result']
-    malls = [mall['mallName'] for mall in res]
-    return malls
+        'user-agent': random.choice(AGENTS)
+    }
+    try:
+        r = requests.get(catalog, headers=headers)
+        json_data = r.json()['result']
+        malls = [mall['mallName'] for mall in json_data]
+        return malls
+    except:
+        msg = handle_errors(response)
+        if msg == "상품이 존재하지 않습니다.":
+            raise NoProductException
+        else:
+            # print(msg)
+            logger.warning(msg)
+            raise Exception
 
 
-def search_store(stores, rel_links):
+def filter_links(stores, rel_links):
+    # 가격 비교 경쟁사 중 타게팅 회사 있는 경우 뽑기
+    headers = {
+        "authority": "search.shopping.naver.com",
+        "referer": "https://shopping.naver.com/",
+        "user-agent": random.choice(AGENTS)
+    }
     result = []
     for link in rel_links:
+        logger.info(rel_links.index(link)+1)
         r = requests.get(link, headers=headers)
-        catalog = r.url.split("?")[0]+"/malls?pr=PC"
-        malls = search_catalog(r, catalog)
+        c = 1
+        while True:
+            try:
+                time.sleep(random.randrange(1, 10))
+                malls = search_catalog(r)
+                break
+            except KeyboardInterrupt:
+                return
+            except NoProductException:
+                # print(r.url)
+                # print("상품이 존재하지 않습니다. 스킵합니다.")
+                logger.debug(r.url)
+                logger.error("상품이 존재하지 않습니다. 스킵합니다.")
+                break
+            except Exception:
+                # print(f'try - {c} RETRYING')
+                logger.info(f'try - {c} RETRYING...')
+                time.sleep(random.randrange(30, 60))
+                c += 1
+                continue
         for store in stores:
             if store in malls:
+                print('yes')
                 result.append(link)
                 break
     return result
