@@ -10,6 +10,7 @@ logger = logger
 
 class Worker(QObject):
     finished = Signal()
+    rest = Signal()
 
     def __init__(self, targets, keywords, pages, interval):
         super().__init__()
@@ -22,15 +23,15 @@ class Worker(QObject):
         while True:
             RESULT = []
             for key in self.keywords:
-                logger.info(key)
+                logger.info(f'"{key}" 키워드를 탐색합니다.')
                 for p in range(1, self.pages+1):
-                    logger.info(f'페이지 {p}')
+                    logger.info(f'페이지 {p} 수집 중입니다.')
                     rel_links = extract_catalog_links(key, p)
                     result = filter_links(self.targets, rel_links)
                     RESULT.extend(result)
             RESULT = list(dict.fromkeys(RESULT))
-            for r in RESULT:
-                with open('result.txt', 'a', encoding='utf-8-sig') as f:
-                    f.write(r+"\n")
+            with open('logs/result.txt', 'w') as f:
+                f.writelines("%s\n" % r for r in RESULT)
+            self.rest.emit()
             logger.info(f"{self.interval} 시간 뒤에 다시 작동합니다...")
-            time.sleep(self.interval)
+            time.sleep(60*self.interval)

@@ -1,4 +1,3 @@
-import time
 import logging
 import sys
 
@@ -14,8 +13,9 @@ from worker import Worker
 class QTextEditLogger(logging.Handler):
     def __init__(self, parent):
         super().__init__()
-        self.widget = QPlainTextEdit(parent)
-        self.widget.setReadOnly(True)
+        self.widget = parent
+        # self.widget = QPlainTextEdit(parent)
+        # self.widget.setReadOnly(True)
 
     def emit(self, record):
         msg = self.format(record)
@@ -128,6 +128,7 @@ class MainWindow(QMainWindow):
         self.thread.started.connect(self.worker.run)
         self.worker.finished.connect(self.thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
+        self.worker.rest.connect(self.handle_rest)
         self.thread.finished.connect(self.thread.deleteLater)
         self.thread.start()
         self.thread.finished.connect(self.handle_finished)
@@ -138,6 +139,12 @@ class MainWindow(QMainWindow):
         self.ui.keyword_button.setEnabled(True)
         self.ui.page_spin_box.setEnabled(True)
         self.ui.time_interval_spin_box.setEnabled(True)
+
+    def handle_rest(self):
+        with open('logs/result.txt', 'r', encoding='utf-8-sig') as f:
+            links_txt = f.read()
+        print(links_txt)
+        self.ui.link_plain_text_edit.setPlainText(links_txt)
 
 
 if __name__ == "__main__":

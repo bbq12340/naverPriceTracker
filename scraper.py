@@ -65,7 +65,6 @@ def search_catalog(response):
         if msg == "상품이 존재하지 않습니다.":
             raise NoProductException
         else:
-            # print(msg)
             logger.warning(msg)
             raise Exception
 
@@ -90,20 +89,15 @@ def filter_links(stores, rel_links):
             except KeyboardInterrupt:
                 return
             except NoProductException:
-                # print(r.url)
-                # print("상품이 존재하지 않습니다. 스킵합니다.")
-                logger.debug(r.url)
                 logger.error("상품이 존재하지 않습니다. 스킵합니다.")
                 break
             except Exception:
-                # print(f'try - {c} RETRYING')
                 logger.info(f'try - {c} RETRYING...')
                 time.sleep(random.randrange(30, 60))
                 c += 1
                 continue
         for store in stores:
             if store in malls:
-                print('yes')
                 result.append(link)
                 break
     return result
