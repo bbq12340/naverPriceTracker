@@ -23,9 +23,10 @@
 
 ## Workflow
 
+input : targets, keywords, pages, interval
+output : links
+
 1. Overall
-   input : targets, keywords, pages, interval
-   output : links
 
 ```sequence
 user->main: inputs

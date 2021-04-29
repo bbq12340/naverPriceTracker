@@ -28,3 +28,8 @@ def handle_errors(response):
 class NoProductException(Exception):
     """상품이 존재하지 않습니다."""
     pass
+
+
+class TooManyRequestsException(Exception):
+    """요청이 너무 많습니다."""
+    pass

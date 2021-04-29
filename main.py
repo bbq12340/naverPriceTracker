@@ -14,8 +14,6 @@ class QTextEditLogger(logging.Handler):
     def __init__(self, parent):
         super().__init__()
         self.widget = parent
-        # self.widget = QPlainTextEdit(parent)
-        # self.widget.setReadOnly(True)
 
     def emit(self, record):
         msg = self.format(record)
@@ -96,20 +94,6 @@ class MainWindow(QMainWindow):
     def handle_exit(self):
         self.worker.finished.emit()
 
-    # def handle_start(self):
-    #     self.thread = QThread()
-    #     self.worker = Worker(self.query_list, self.ui.delaySpinBox.text())
-    #     self.worker.moveToThread(self.thread)
-    #     self.thread.started.connect(self.worker.run)
-    #     self.worker.finished.connect(self.thread.quit)
-    #     self.worker.finished.connect(self.worker.deleteLater)
-    #     self.thread.finished.connect(self.thread.deleteLater)
-    #     self.worker.progress.connect(self.ui.progressBar.setValue)
-    #     self.thread.start()
-    #     self.ui.buttonFrame.setEnabled(False)
-    #     self.ui.inputFrame.setEnabled(False)
-    #     self.thread.finished.connect(self.handle_finished)
-
     def handle_start(self):
         self.pages = self.ui.page_spin_box.text()
         self.intervals = self.ui.time_interval_spin_box.text()
@@ -121,6 +105,7 @@ class MainWindow(QMainWindow):
         self.ui.keyword_button.setEnabled(False)
         self.ui.page_spin_box.setEnabled(False)
         self.ui.time_interval_spin_box.setEnabled(False)
+        self.ui.start_button.setEnabled(False)
         self.thread = QThread()
         self.worker = Worker(self.targets, self.keywords,
                              self.pages, self.intervals)
@@ -139,11 +124,11 @@ class MainWindow(QMainWindow):
         self.ui.keyword_button.setEnabled(True)
         self.ui.page_spin_box.setEnabled(True)
         self.ui.time_interval_spin_box.setEnabled(True)
+        self.ui.start_button.setEnabled(True)
 
     def handle_rest(self):
         with open('logs/result.txt', 'r', encoding='utf-8-sig') as f:
             links_txt = f.read()
-        print(links_txt)
         self.ui.link_plain_text_edit.setPlainText(links_txt)
 
 

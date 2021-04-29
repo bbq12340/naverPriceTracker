@@ -30,8 +30,8 @@ class Worker(QObject):
                     result = filter_links(self.targets, rel_links)
                     RESULT.extend(result)
             RESULT = list(dict.fromkeys(RESULT))
-            with open('logs/result.txt', 'w') as f:
+            with open('logs/result.txt', 'w', encoding='utf-8-sig') as f:
                 f.writelines("%s\n" % r for r in RESULT)
             self.rest.emit()
             logger.info(f"{self.interval} 시간 뒤에 다시 작동합니다...")
-            time.sleep(60*self.interval)
+            time.sleep(360*self.interval)

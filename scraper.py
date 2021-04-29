@@ -7,7 +7,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from userAgents import scrape_userAgents
-from middleware import NoProductException, handle_errors
+from middleware import NoProductException, TooManyRequestsException, handle_errors
 from logger import logger
 
 logger = logger
@@ -64,8 +64,10 @@ def search_catalog(response):
         msg = handle_errors(response)
         if msg == "상품이 존재하지 않습니다.":
             raise NoProductException
+        elif msg == "요청이 너무 많습니다.":
+            raise TooManyRequestsException
         else:
-            logger.warning(msg)
+            logger.error(msg)
             raise Exception
 
 
@@ -81,9 +83,13 @@ def filter_links(stores, rel_links):
         logger.info(rel_links.index(link)+1)
         r = requests.get(link, headers=headers)
         c = 1
+        temp, scraping_interval = random.randrange(
+            2, 5), random.randrange(2, 5)
         while True:
+            while temp == scraping_interval:
+                scraping_interval = random.randrange(2, 5)
             try:
-                time.sleep(random.randrange(1, 10))
+                time.sleep(scraping_interval)
                 malls = search_catalog(r)
                 break
             except KeyboardInterrupt:
@@ -91,11 +97,15 @@ def filter_links(stores, rel_links):
             except NoProductException:
                 logger.error("상품이 존재하지 않습니다. 스킵합니다.")
                 break
+            except TooManyRequestsException:
+                logger.error("너무 많은 요청이 있었습니다. 잠시 휴식합니다.")
+                time.sleep(60)
             except Exception:
                 logger.info(f'try - {c} RETRYING...')
                 time.sleep(random.randrange(30, 60))
                 c += 1
                 continue
+            temp = scraping_interval
         for store in stores:
             if store in malls:
                 result.append(link)
